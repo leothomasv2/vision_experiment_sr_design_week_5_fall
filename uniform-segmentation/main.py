@@ -1,77 +1,103 @@
 
+import argparse
 from pathlib import Path
 
-import cv2
 import numpy as np
 import torch
-import torch.nn.functional as F
 from PIL import Image
 from transformers import AutoImageProcessor, SegformerForSemanticSegmentation
 
 MODEL_ID = "mattmdjaga/segformer_b2_clothes"
-IMAGE_PATH = "athlete.jpg"
-OUTPUT_DIR = Path("output")
-OUTPUT_DIR.mkdir(exist_ok=True)
+SCRIPT_DIR = Path(__file__).resolve().parent
+DEFAULT_IMAGE = SCRIPT_DIR / "examples" / "page-1-image-1.png"
+DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "output"
 
-# Load model once, not once per image.
-device = "cuda" if torch.cuda.is_available() else "cpu"
 
-processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-model = SegformerForSemanticSegmentation.from_pretrained(MODEL_ID)
-model = model.to(device).eval()
-
-# Load athlete image.
-image = Image.open(IMAGE_PATH).convert("RGB")
-image_np = np.array(image)
-
-# Predict segmentation labels.
-inputs = processor(images=image, return_tensors="pt")
-inputs = {key: value.to(device) for key, value in inputs.items()}
-
-with torch.inference_mode():
-    outputs = model(**inputs)
-
-    logits = F.interpolate(
-        outputs.logits,
-        size=(image.height, image.width),
-        mode="bilinear",
-        align_corners=False,
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Separate a race walker's jersey and shorts with SegFormer B2 Clothes."
     )
+    parser.add_argument(
+        "image",
+        nargs="?",
+        type=Path,
+        default=DEFAULT_IMAGE,
+        help=f"input image (default: {DEFAULT_IMAGE.relative_to(SCRIPT_DIR)})",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=DEFAULT_OUTPUT_DIR,
+        help=f"output directory (default: {DEFAULT_OUTPUT_DIR.relative_to(SCRIPT_DIR)})",
+    )
+    return parser.parse_args()
 
-    segmentation = logits.argmax(dim=1)[0].cpu().numpy()
 
-# Class indices from model configuration.
-upper_id = 4
-pants_id = 6
+def class_id(model: SegformerForSemanticSegmentation, label: str) -> int:
+    """Look up a class ID without relying on undocumented numeric constants."""
+    normalized_label = label.lower().replace("-", "").replace("_", "")
+    for index, name in model.config.id2label.items():
+        normalized_name = name.lower().replace("-", "").replace("_", "")
+        if normalized_name == normalized_label:
+            return int(index)
+    raise ValueError(f"Model does not contain a {label!r} class")
 
-upper_mask = (segmentation == upper_id).astype(np.uint8) * 255
-pants_mask = (segmentation == pants_id).astype(np.uint8) * 255
 
-def save_masked_image(mask, filename):
-    # Original RGB values remain unchanged within mask.
-    result = cv2.bitwise_and(image_np, image_np, mask=mask)
-    Image.fromarray(result).save(OUTPUT_DIR / filename)
+def save_cutout(image: Image.Image, mask: np.ndarray, path: Path) -> None:
+    """Save original pixels with a transparent background."""
+    cutout = image.copy()
+    cutout.putalpha(Image.fromarray(mask))
+    cutout.save(path)
 
-save_masked_image(upper_mask, "upper_clothes.png")
-save_masked_image(pants_mask, "pants.png")
 
-Image.fromarray(upper_mask).save(OUTPUT_DIR / "upper_mask.png")
-Image.fromarray(pants_mask).save(OUTPUT_DIR / "pants_mask.png")
+def main() -> None:
+    args = parse_args()
+    image_path = args.image.expanduser().resolve()
+    output_dir = args.output_dir.expanduser().resolve()
 
-# Create an overlay for debugging.
-overlay = image_np.copy()
-overlay[upper_mask > 0] = [0, 220, 80]
-overlay[pants_mask > 0] = [0, 180, 255]
+    if not image_path.is_file():
+        raise FileNotFoundError(f"Input image not found: {image_path}")
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-visualization = cv2.addWeighted(
-    image_np, 0.6, overlay, 0.4, 0
-)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+    model = SegformerForSemanticSegmentation.from_pretrained(MODEL_ID)
+    model = model.to(device).eval()
 
-Image.fromarray(visualization).save(
-    OUTPUT_DIR / "visualization.png"
-)
+    image = Image.open(image_path).convert("RGB")
+    image_np = np.asarray(image)
+    inputs = {
+        key: value.to(device)
+        for key, value in processor(images=image, return_tensors="pt").items()
+    }
 
-print("Device:", device)
-print("Upper clothes pixels:", np.count_nonzero(upper_mask))
-print("Pants pixels:", np.count_nonzero(pants_mask))
-print("Images saved in:", OUTPUT_DIR.resolve())
+    with torch.inference_mode():
+        outputs = model(**inputs)
+    segmentation = processor.post_process_semantic_segmentation(
+        outputs, target_sizes=[(image.height, image.width)]
+    )[0].cpu().numpy()
+
+    jersey_mask = (segmentation == class_id(model, "Upper-clothes")).astype(np.uint8) * 255
+    # This checkpoint calls both trousers and shorts "Pants".
+    shorts_mask = (segmentation == class_id(model, "Pants")).astype(np.uint8) * 255
+
+    save_cutout(image, jersey_mask, output_dir / "jersey.png")
+    save_cutout(image, shorts_mask, output_dir / "shorts.png")
+    Image.fromarray(jersey_mask).save(output_dir / "jersey_mask.png")
+    Image.fromarray(shorts_mask).save(output_dir / "shorts_mask.png")
+
+    overlay = image_np.copy()
+    overlay[jersey_mask > 0] = [0, 220, 80]
+    overlay[shorts_mask > 0] = [0, 150, 255]
+    visualization = (image_np * 0.6 + overlay * 0.4).astype(np.uint8)
+    Image.fromarray(visualization).save(output_dir / "visualization.png")
+
+    print(f"Input: {image_path}")
+    print(f"Device: {device}")
+    print(f"Jersey pixels: {np.count_nonzero(jersey_mask)}")
+    print(f"Shorts pixels: {np.count_nonzero(shorts_mask)}")
+    print(f"Images saved in: {output_dir}")
+
+
+if __name__ == "__main__":
+    main()

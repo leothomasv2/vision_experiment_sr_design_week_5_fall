@@ -9,8 +9,9 @@ from transformers import AutoImageProcessor, SegformerForSemanticSegmentation
 
 MODEL_ID = "mattmdjaga/segformer_b2_clothes"
 SCRIPT_DIR = Path(__file__).resolve().parent
-DEFAULT_IMAGE = SCRIPT_DIR / "examples" / "page-1-image-1.png"
+DEFAULT_INPUT = SCRIPT_DIR / "examples"
 DEFAULT_OUTPUT_DIR = SCRIPT_DIR / "output"
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
 
 
 def parse_args() -> argparse.Namespace:
@@ -18,11 +19,11 @@ def parse_args() -> argparse.Namespace:
         description="Separate a race walker's jersey and shorts with SegFormer B2 Clothes."
     )
     parser.add_argument(
-        "image",
+        "input",
         nargs="?",
         type=Path,
-        default=DEFAULT_IMAGE,
-        help=f"input image (default: {DEFAULT_IMAGE.relative_to(SCRIPT_DIR)})",
+        default=DEFAULT_INPUT,
+        help="input image or directory (default: examples/)",
     )
     parser.add_argument(
         "--output-dir",
@@ -50,19 +51,15 @@ def save_cutout(image: Image.Image, mask: np.ndarray, path: Path) -> None:
     cutout.save(path)
 
 
-def main() -> None:
-    args = parse_args()
-    image_path = args.image.expanduser().resolve()
-    output_dir = args.output_dir.expanduser().resolve()
-
-    if not image_path.is_file():
-        raise FileNotFoundError(f"Input image not found: {image_path}")
+def process_image(
+    image_path: Path,
+    output_dir: Path,
+    processor: AutoImageProcessor,
+    model: SegformerForSemanticSegmentation,
+    device: str,
+) -> dict[str, int | str]:
+    """Segment one image and save its masks, cutouts, and visualization."""
     output_dir.mkdir(parents=True, exist_ok=True)
-
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = AutoImageProcessor.from_pretrained(MODEL_ID)
-    model = SegformerForSemanticSegmentation.from_pretrained(MODEL_ID)
-    model = model.to(device).eval()
 
     image = Image.open(image_path).convert("RGB")
     image_np = np.asarray(image)
@@ -92,11 +89,55 @@ def main() -> None:
     visualization = (image_np * 0.6 + overlay * 0.4).astype(np.uint8)
     Image.fromarray(visualization).save(output_dir / "visualization.png")
 
-    print(f"Input: {image_path}")
+    return {
+        "image": image_path.name,
+        "jersey_pixels": int(np.count_nonzero(jersey_mask)),
+        "shorts_pixels": int(np.count_nonzero(shorts_mask)),
+    }
+
+
+def find_images(input_path: Path) -> list[Path]:
+    if input_path.is_file():
+        if input_path.suffix.lower() not in IMAGE_EXTENSIONS:
+            raise ValueError(f"Unsupported image type: {input_path.suffix}")
+        return [input_path]
+    if input_path.is_dir():
+        return sorted(
+            path
+            for path in input_path.iterdir()
+            if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS
+        )
+    raise FileNotFoundError(f"Input image or directory not found: {input_path}")
+
+
+def main() -> None:
+    args = parse_args()
+    input_path = args.input.expanduser().resolve()
+    output_root = args.output_dir.expanduser().resolve()
+    image_paths = find_images(input_path)
+    if not image_paths:
+        raise FileNotFoundError(f"No PNG or JPG images found in: {input_path}")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    processor = AutoImageProcessor.from_pretrained(MODEL_ID)
+    model = SegformerForSemanticSegmentation.from_pretrained(MODEL_ID)
+    model = model.to(device).eval()
+
     print(f"Device: {device}")
-    print(f"Jersey pixels: {np.count_nonzero(jersey_mask)}")
-    print(f"Shorts pixels: {np.count_nonzero(shorts_mask)}")
-    print(f"Images saved in: {output_dir}")
+    for image_path in image_paths:
+        result = process_image(
+            image_path,
+            output_root / image_path.stem,
+            processor,
+            model,
+            device,
+        )
+        print(
+            f"{result['image']}: jersey={result['jersey_pixels']} px, "
+            f"shorts={result['shorts_pixels']} px"
+        )
+    print(f"Processed {len(image_paths)} image(s)")
+    print(f"Images saved in: {output_root}")
 
 
 if __name__ == "__main__":

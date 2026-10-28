@@ -1,0 +1,204 @@
+{
+  "source": "Offline snapshot from load_race_entries.py; not a live database export",
+  "entries": [
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 1,
+      "Bib": 120,
+      "CountryCode": "ITA",
+      "TopColors": [
+        "white"
+      ],
+      "TopPattern": "solid",
+      "BottomColors": [
+        "dark blue"
+      ],
+      "Brand": "On"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 2,
+      "Bib": 116,
+      "CountryCode": "FRA",
+      "TopColors": [
+        "blue",
+        "white",
+        "red"
+      ],
+      "TopPattern": "vertical tricolor, left to right",
+      "BottomColors": [
+        "white"
+      ],
+      "Brand": "Adidas"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 3,
+      "Bib": 106,
+      "CountryCode": "CHN",
+      "TopColors": [
+        "orange"
+      ],
+      "TopPattern": "solid",
+      "BottomColors": [
+        "coral"
+      ],
+      "Brand": "Nike"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 4,
+      "Bib": 122,
+      "CountryCode": "JPN",
+      "TopColors": [
+        "pink"
+      ],
+      "TopPattern": "solid",
+      "BottomColors": [
+        "black"
+      ],
+      "Brand": "Asics"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 5,
+      "Bib": 123,
+      "CountryCode": "JPN",
+      "TopColors": [
+        "pink"
+      ],
+      "TopPattern": "solid",
+      "BottomColors": [
+        "black"
+      ],
+      "Brand": "Asics"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 6,
+      "Bib": 112,
+      "CountryCode": "ESP",
+      "TopColors": [
+        "coral",
+        "yellow"
+      ],
+      "TopPattern": "gradient, top to bottom",
+      "BottomColors": [
+        "black"
+      ],
+      "Brand": "Joma"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 7,
+      "Bib": 140,
+      "CountryCode": "UKR",
+      "TopColors": [
+        "blue",
+        "yellow"
+      ],
+      "TopPattern": "blue with yellow oblique side stripes",
+      "BottomColors": [
+        "blue"
+      ],
+      "Brand": "Puma"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 8,
+      "Bib": 127,
+      "CountryCode": "MEX",
+      "TopColors": [
+        "black"
+      ],
+      "TopPattern": "solid",
+      "BottomColors": [
+        "black"
+      ],
+      "Brand": "unknown, possibly Joma"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 9,
+      "Bib": 131,
+      "CountryCode": "POL",
+      "TopColors": [
+        "white",
+        "coral"
+      ],
+      "TopPattern": "gradient, top to bottom",
+      "BottomColors": [
+        "orange"
+      ],
+      "Brand": "4F"
+    },
+    {
+      "RaceId": "2026-wu20-w5000m-rw",
+      "AthleteId": 10,
+      "Bib": 134,
+      "CountryCode": "SRB",
+      "TopColors": [
+        "blue",
+        "red",
+        "blue"
+      ],
+      "TopPattern": "gradient, left to middle to right",
+      "BottomColors": [
+        "red"
+      ],
+      "Brand": "Joma"
+    }
+  ],
+  "athletes": [
+    {
+      "AthleteId": 1,
+      "FirstName": "Serena",
+      "LastName": "Di Fabio"
+    },
+    {
+      "AthleteId": 2,
+      "FirstName": "Chloe",
+      "LastName": "Le Roch"
+    },
+    {
+      "AthleteId": 3,
+      "FirstName": "Yutong",
+      "LastName": "Yang"
+    },
+    {
+      "AthleteId": 4,
+      "FirstName": "Ibuki",
+      "LastName": "Hori"
+    },
+    {
+      "AthleteId": 5,
+      "FirstName": "Harumi",
+      "LastName": "Tabata"
+    },
+    {
+      "AthleteId": 6,
+      "FirstName": "Gina",
+      "LastName": "Torres"
+    },
+    {
+      "AthleteId": 7,
+      "FirstName": "Veronika",
+      "LastName": "Tkachuk"
+    },
+    {
+      "AthleteId": 8,
+      "FirstName": "Natalia",
+      "LastName": "Mendiola"
+    },
+    {
+      "AthleteId": 9,
+      "FirstName": "Aleksandra",
+      "LastName": "Zembrowska"
+    },
+    {
+      "AthleteId": 10,
+      "FirstName": "Dunja",
+      "LastName": "Eremi\u0107"
+    }
+  ]
+}

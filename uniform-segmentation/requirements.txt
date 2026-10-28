@@ -1,5 +1,6 @@
 torch
+torchvision
 transformers
 pillow
-opencv-python
 numpy 
+opencv-python
